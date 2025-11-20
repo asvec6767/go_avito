@@ -12,12 +12,14 @@ type PR struct {
 	Name      string
 	Author    *User
 	Status    PullRequestStatus
+	TeamID    int
 	Reviewers []*User
 }
 
 type PRRepository interface {
 	GetById(id int) (*PR, error)
 	GetByName(name string) (*PR, error)
+	GetByTeamId(id int) (*PR, error)
 	Create(team *PR) (int, error)
 	Update(team *PR) error
 	Delete(id int) error

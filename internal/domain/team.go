@@ -1,9 +1,8 @@
 package domain
 
 type Team struct {
-	ID    int
-	Name  string
-	Users []*User
+	ID   int
+	Name string
 }
 
 type TeamRepository interface {
