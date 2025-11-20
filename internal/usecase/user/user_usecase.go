@@ -36,6 +36,10 @@ func (uc *userUseCase) GetByName(name string) (*domain.User, error) {
 	return uc.user.GetByName(name)
 }
 
+func (uc *userUseCase) GetList(ids []int) ([]*domain.User, error) {
+	return uc.user.GetList(ids)
+}
+
 func (uc *userUseCase) Activate(id int) (*domain.User, error) {
 	user, err := uc.user.GetById(id)
 	if err != nil {
