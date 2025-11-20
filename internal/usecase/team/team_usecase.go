@@ -3,14 +3,14 @@ package team
 import "main/internal/domain"
 
 type teamUseCase struct {
-	Team domain.TeamRepository
-	User domain.UserRepository
+	team domain.TeamRepository
+	user domain.UserRepository
 }
 
-func NewTeamUseCase(team domain.TeamRepository, user domain.UserRepository) *teamUseCase {
+func NewTeamUseCase(teamRepo domain.TeamRepository, userRepo domain.UserRepository) *teamUseCase {
 	return &teamUseCase{
-		Team: team,
-		User: user,
+		team: teamRepo,
+		user: userRepo,
 	}
 }
 
@@ -19,7 +19,7 @@ func (uc *teamUseCase) Create(name string) (*domain.Team, error) {
 		Name: name,
 	}
 
-	id, err := uc.Team.Create(team)
+	id, err := uc.team.Create(team)
 	if err != nil {
 		return nil, err
 	}
@@ -30,26 +30,26 @@ func (uc *teamUseCase) Create(name string) (*domain.Team, error) {
 }
 
 func (uc *teamUseCase) GetById(id int) (*domain.Team, error) {
-	return uc.Team.GetById(id)
+	return uc.team.GetById(id)
 }
 
 func (uc *teamUseCase) GetByName(name string) (*domain.Team, error) {
-	return uc.Team.GetByName(name)
+	return uc.team.GetByName(name)
 }
 
 func (uc *teamUseCase) AddUser(team_id, user_id int) error {
-	if _, err := uc.Team.GetById(team_id); err != nil {
+	if _, err := uc.team.GetById(team_id); err != nil {
 		return err
 	}
 
-	user, err := uc.User.GetById(user_id)
+	user, err := uc.user.GetById(user_id)
 	if err != nil {
 		return err
 	}
 
 	user.TeamID = team_id
 
-	err = uc.User.Update(user)
+	err = uc.user.Update(user)
 	if err != nil {
 		return err
 	}
@@ -58,14 +58,14 @@ func (uc *teamUseCase) AddUser(team_id, user_id int) error {
 }
 
 func (uc *teamUseCase) RemoveUser(user_id int) error {
-	user, err := uc.User.GetById(user_id)
+	user, err := uc.user.GetById(user_id)
 	if err != nil {
 		return err
 	}
 
 	user.TeamID = 0
 
-	err = uc.User.Update(user)
+	err = uc.user.Update(user)
 	if err != nil {
 		return err
 	}
@@ -74,19 +74,19 @@ func (uc *teamUseCase) RemoveUser(user_id int) error {
 }
 
 func (uc *teamUseCase) SetUsers(team_id int, user_ids []int) error {
-	if _, err := uc.Team.GetById(team_id); err != nil {
+	if _, err := uc.team.GetById(team_id); err != nil {
 		return err
 	}
 
 	for _, user_id := range user_ids {
-		user, err := uc.User.GetById(user_id)
+		user, err := uc.user.GetById(user_id)
 		if err != nil {
 			return err
 		}
 
 		user.TeamID = team_id
 
-		err = uc.User.Update(user)
+		err = uc.user.Update(user)
 		if err != nil {
 			return err
 		}
@@ -95,20 +95,27 @@ func (uc *teamUseCase) SetUsers(team_id int, user_ids []int) error {
 	return nil
 }
 
-// TODO: сделать норм обработку ошибки в этой функции
-// func (uc *teamUseCase) RemoveAllUsers(team_id int) error {
-// 	for user, err := uc.User.GetByTeamId(team_id); user!=nil && err==nil; {
-// 		user.TeamID=0;
+func (uc *teamUseCase) RemoveAllUsers(team_id int) error {
+	users, err := uc.user.GetListByTeamId(team_id)
+	if err != nil {
+		return err
+	}
 
-// 		err = uc.User.Update(user)
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
+	for _, user := range users {
+		user.TeamID = 0
 
-// 	return nil
-// }
+		err = uc.user.Update(user)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 func (uc *teamUseCase) Delete(id int) error {
-	return uc.Team.Delete(id)
+	if err := uc.RemoveAllUsers(id); err != nil {
+		return err
+	}
+	return uc.team.Delete(id)
 }

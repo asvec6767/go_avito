@@ -10,7 +10,7 @@ const (
 type PR struct {
 	ID        int
 	Name      string
-	Author    *User
+	Author_id int
 	Status    PullRequestStatus
 	TeamID    int
 	Reviewers []*User

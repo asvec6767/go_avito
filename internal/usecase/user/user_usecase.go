@@ -40,6 +40,10 @@ func (uc *userUseCase) GetList(ids []int) ([]*domain.User, error) {
 	return uc.user.GetList(ids)
 }
 
+func (uc *userUseCase) GetListByTeamId(id int) ([]*domain.User, error) {
+	return uc.user.GetListByTeamId(id)
+}
+
 func (uc *userUseCase) Activate(id int) (*domain.User, error) {
 	user, err := uc.user.GetById(id)
 	if err != nil {

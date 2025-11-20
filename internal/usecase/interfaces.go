@@ -9,6 +9,7 @@ type UserUseCase interface {
 	GetById(id int) (*domain.User, error)
 	GetByName(name string) (*domain.User, error)
 	GetList(ids []int) ([]*domain.User, error)
+	GetListByTeamId(id int) ([]*domain.User, error)
 	Activate(id int) (*domain.User, error)
 	Deactivate(id int) (*domain.User, error)
 	Delete(id int) error
@@ -22,5 +23,16 @@ type TeamUseCase interface {
 	AddUser(team_id, user_id int) error
 	RemoveUser(user_id int) error
 	// RemoveAllUsers(user_id []int) error
+	Delete(id int) error
+}
+
+type PullRequestUseCase interface {
+	Create(name string, author_id int) (*domain.PR, error)
+	GetById(id int) (*domain.PR, error)
+	GetByName(name string) (*domain.PR, error)
+	ChangeAllReviewers(id int) (*domain.PR, error)
+	ChangeReviewer(pr_id, old_reviewer_id int) (*domain.PR, error)
+	SetMergedStatus(pr_id int) (*domain.PR, error)
+	SetOpenStatus(pr_id int) (*domain.PR, error)
 	Delete(id int) error
 }
