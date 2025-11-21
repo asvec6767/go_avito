@@ -1,19 +1,22 @@
 package domain
 
-type PullRequestStatus string
+import "gorm.io/gorm"
+
+type PRStatus string
 
 const (
-	PullRequestStatusOpen   PullRequestStatus = "OPEN"
-	PullRequestStatusMerged PullRequestStatus = "MERGED"
+	PullRequestStatusOpen   PRStatus = "OPEN"
+	PullRequestStatusMerged PRStatus = "MERGED"
 )
 
 type PR struct {
-	ID        int
-	Name      string
-	Author_id int
-	Status    PullRequestStatus
-	TeamID    int
-	Reviewers []*User
+	gorm.Model
+	Name      string   `json:"name" gorm:"not null;unique"`
+	AuthorID  int      `json:"author_id" gorm:"not null;index"`
+	Author    User     `json:"author,omitempty" gorm:"foreignKey:AuthorID"`
+	Status    PRStatus `json:"status" gorm:"default:'OPEN'"`
+	TeamID    int      `json:"team_id" gorm:"not null;index"`
+	Reviewers []User   `json:"reviewers" gorm:"many2many:pr_users"`
 }
 
 type PRRepository interface {
