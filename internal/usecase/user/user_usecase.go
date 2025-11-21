@@ -77,6 +77,22 @@ func (uc *userUseCase) Deactivate(id int) (*domain.User, error) {
 	return user, nil
 }
 
+func (uc *userUseCase) SetIsActive(id int, status bool) (*domain.User, error) {
+	user, err := uc.user.GetById(id)
+	if err != nil {
+		return nil, err
+	}
+
+	user.IsActive = status
+
+	err = uc.user.Update(user)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
 func (uc *userUseCase) Delete(id int) error {
 	return uc.user.Delete(id)
 }

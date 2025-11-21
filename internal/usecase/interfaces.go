@@ -12,6 +12,7 @@ type UserUseCase interface {
 	GetListByTeamId(id int) ([]*domain.User, error)
 	Activate(id int) (*domain.User, error)
 	Deactivate(id int) (*domain.User, error)
+	SetIsActive(id int, status bool) (*domain.User, error)
 	Delete(id int) error
 }
 
