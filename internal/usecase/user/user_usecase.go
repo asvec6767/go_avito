@@ -16,6 +16,7 @@ func (uc *userUseCase) Create(name string) (*domain.User, error) {
 	user := &domain.User{
 		Name:     name,
 		IsActive: false,
+		// TeamID: 0,
 	}
 
 	id, err := uc.user.Create(user)
@@ -23,7 +24,7 @@ func (uc *userUseCase) Create(name string) (*domain.User, error) {
 		return nil, err
 	}
 
-	user.ID = id
+	user.ID = uint(id)
 
 	return user, nil
 }
@@ -36,13 +37,13 @@ func (uc *userUseCase) GetByName(name string) (*domain.User, error) {
 	return uc.user.GetByName(name)
 }
 
-func (uc *userUseCase) GetList(ids []int) ([]*domain.User, error) {
-	return uc.user.GetList(ids)
-}
+// func (uc *userUseCase) GetList(ids []int) ([]*domain.User, error) {
+// 	return uc.user.GetList(ids)
+// }
 
-func (uc *userUseCase) GetListByTeamId(id int) ([]*domain.User, error) {
-	return uc.user.GetListByTeamId(id)
-}
+// func (uc *userUseCase) GetListByTeamId(id int) ([]*domain.User, error) {
+// 	return uc.user.GetListByTeamId(id)
+// }
 
 func (uc *userUseCase) Activate(id int) (*domain.User, error) {
 	user, err := uc.user.GetById(id)

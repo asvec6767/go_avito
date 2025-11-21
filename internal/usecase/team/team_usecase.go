@@ -24,7 +24,7 @@ func (uc *teamUseCase) Create(name string) (*domain.Team, error) {
 		return nil, err
 	}
 
-	team.ID = id
+	team.ID = uint(id)
 
 	return team, nil
 }
@@ -96,12 +96,17 @@ func (uc *teamUseCase) SetUsers(team_id int, user_ids []int) error {
 }
 
 func (uc *teamUseCase) RemoveAllUsers(team_id int) error {
-	users, err := uc.user.GetListByTeamId(team_id)
+	team, err := uc.team.GetById(team_id)
 	if err != nil {
 		return err
 	}
 
-	for _, user := range users {
+	// users, err := uc.user.GetListByTeamId(team_id)
+	// if err != nil {
+	// 	return err
+	// }
+
+	for _, user := range team.Users {
 		user.TeamID = 0
 
 		err = uc.user.Update(user)

@@ -1,7 +1,6 @@
 package pullrequest
 
 import (
-	"fmt"
 	"main/internal/domain"
 	"math/rand/v2"
 	"slices"
@@ -33,10 +32,10 @@ func (uc *pullRequestUseCase) Create(name string, author_id int) (*domain.PR, er
 	}
 
 	pr := &domain.PR{
-		Name:      name,
-		Status:    domain.PullRequestStatusOpen,
-		Author_id: author_id,
-		TeamID:    team.ID,
+		Name:     name,
+		Status:   domain.PullRequestStatusOpen,
+		AuthorID: author_id,
+		TeamID:   int(team.ID),
 	}
 
 	pr_id, err := uc.pr.Create(pr)
@@ -44,7 +43,7 @@ func (uc *pullRequestUseCase) Create(name string, author_id int) (*domain.PR, er
 		return nil, err
 	}
 
-	pr.ID = pr_id
+	pr.ID = uint(pr_id)
 
 	return pr, nil
 }
@@ -65,23 +64,21 @@ func (uc *pullRequestUseCase) ChangeAllReviewers(id int) (*domain.PR, error) {
 	}
 
 	if pullrequest.Status == domain.PullRequestStatusMerged {
-		return nil, fmt.Errorf("невозможно изменить pullrequest в статусе merged")
+		return nil, domain.ErrAccessDenied
+		// return nil, fmt.Errorf("невозможно изменить pullrequest в статусе merged")
 	}
 
-	author, err := uc.user.GetById(pullrequest.Author_id)
+	author, err := uc.user.GetById(pullrequest.AuthorID)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = uc.team.GetById(author.TeamID)
+	team, err := uc.team.GetById(author.TeamID)
 	if err != nil {
 		return nil, err
 	}
 
-	users, err := uc.user.GetListByTeamId(author.TeamID)
-	if err != nil {
-		return nil, err
-	}
+	users := team.Users
 
 	users = removeUserFromUsersList(users, author)
 	pullrequest.Reviewers = setNRandomReviewers(users, 2)
@@ -121,7 +118,8 @@ func (uc *pullRequestUseCase) ChangeReviewer(pr_id, old_reviewer_id int) (*domai
 	}
 
 	if pullrequest.Status == domain.PullRequestStatusMerged {
-		return nil, fmt.Errorf("невозможно изменить pullrequest в статусе merged")
+		return nil, domain.ErrAccessDenied
+		// return nil, fmt.Errorf("невозможно изменить pullrequest в статусе merged")
 	}
 
 	old_reviewer, err := uc.user.GetById(old_reviewer_id)
@@ -129,24 +127,22 @@ func (uc *pullRequestUseCase) ChangeReviewer(pr_id, old_reviewer_id int) (*domai
 		return nil, err
 	}
 
-	_, err = uc.team.GetById(old_reviewer.TeamID)
+	old_true_reviewer := removeUserFromUsersList(pullrequest.Reviewers, old_reviewer)[0]
+
+	team, err := uc.team.GetById(old_reviewer.TeamID)
 	if err != nil {
 		return nil, err
 	}
 
-	users, err := uc.user.GetListByTeamId(old_reviewer.TeamID)
-	if err != nil {
-		return nil, err
-	}
+	users := team.Users
 
-	author, err := uc.user.GetById(pullrequest.Author_id)
-	if err != nil {
-		return nil, err
-	}
+	author := pullrequest.Author
 
-	users = removeUserFromUsersList(users, author)
+	users = removeUserFromUsersList(users, &author)
 	users = removeUserFromUsersList(users, old_reviewer)
-	pullrequest.Reviewers = setNRandomReviewers(users, 2)
+	pullrequest.Reviewers = setNRandomReviewers(users, 1)
+
+	pullrequest.Reviewers = append(pullrequest.Reviewers, old_true_reviewer)
 
 	return pullrequest, nil
 }

@@ -4,9 +4,9 @@ import "gorm.io/gorm"
 
 type Team struct {
 	gorm.Model
-	Name  string `json:"name" gorm:"not null;unique"`
-	Users []User `json:"users,omitempty" gorm:"foreignKey:TeamID"`
-	PRs   []PR   `json:"prs,omitempty" gorm:"foreignKey:TeamID"`
+	Name  string  `json:"name" gorm:"not null;unique"`
+	Users []*User `json:"users,omitempty" gorm:"foreignKey:TeamID"`
+	PRs   []*PR   `json:"prs,omitempty" gorm:"foreignKey:TeamID"`
 }
 
 type TeamRepository interface {
