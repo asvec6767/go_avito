@@ -1,7 +1,20 @@
 package cmd
 
-import "fmt"
+import (
+	"database/sql"
+	"main/internal/handlers"
+	"main/internal/repository/postgres"
+	userusecase "main/internal/usecase/user"
+)
 
 func main() {
-	fmt.Println("hello avito")
+	var db *sql.DB
+
+	userRepo := postgres.NewUserRepository(db)
+
+	userUseCase := userusecase.NewUserUseCase(userRepo)
+
+	userHandler := handlers.NewUserHandler(userUseCase)
+
+	router := http.
 }
