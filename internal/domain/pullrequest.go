@@ -1,6 +1,10 @@
 package domain
 
-import _ "gorm.io/gorm"
+import (
+	"time"
+
+	_ "gorm.io/gorm"
+)
 
 type PRStatus string
 
@@ -10,13 +14,14 @@ const (
 )
 
 type PR struct {
-	ID        string   `json:"id" gorm:"unique;not null;primarykey"`
-	Name      string   `json:"name" gorm:"not null;unique"`
-	AuthorID  string   `json:"author_id" gorm:"not null;index"`
-	Author    User     `json:"author,omitempty" gorm:"foreignKey:AuthorID"`
-	Status    PRStatus `json:"status" gorm:"default:'OPEN'"`
-	TeamID    string   `json:"team_id" gorm:"not null;index"`
-	Reviewers []*User  `json:"reviewers" gorm:"many2many:pr_users"`
+	ID        string    `json:"id" gorm:"unique;not null;primarykey"`
+	Name      string    `json:"name" gorm:"not null;unique"`
+	AuthorID  string    `json:"author_id" gorm:"not null;index"`
+	Author    User      `json:"author,omitempty" gorm:"foreignKey:AuthorID"`
+	Status    PRStatus  `json:"status" gorm:"default:'OPEN'"`
+	TeamID    string    `json:"team_id" gorm:"not null;index"`
+	Reviewers []*User   `json:"reviewers" gorm:"many2many:pr_users"`
+	MergedAt  time.Time `json:"mergedAt,omitempty"`
 }
 
 type PRRepository interface {

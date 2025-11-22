@@ -14,7 +14,7 @@ func NewUserUseCase(userRepo domain.UserRepository) *userUseCase {
 
 func (uc *userUseCase) Create(name string) (*domain.User, error) {
 	user := &domain.User{
-		Name:     name,
+		Username: name,
 		IsActive: false,
 		// TeamID: 0,
 	}

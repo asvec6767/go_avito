@@ -17,8 +17,12 @@ func NewUserHandler(userUseCase usecase.UserUseCase) *UserHandler {
 	}
 }
 
-func (h *UserHandler) GetUser(c *gin.Context) {
+func (h *UserHandler) GetUserGet(c *gin.Context) {
 	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Query argument is required, but not found"})
+		return
+	}
 
 	user, err := h.userUseCase.GetById(id)
 	if err != nil {
@@ -29,7 +33,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-func (h *UserHandler) Createuser(c *gin.Context) {
+func (h *UserHandler) PostUserCreate(c *gin.Context) {
 	var request struct {
 		Name string `json:"name"`
 	}
@@ -48,10 +52,17 @@ func (h *UserHandler) Createuser(c *gin.Context) {
 	c.JSON(http.StatusCreated, user)
 }
 
-func (h *UserHandler) SetUserIsActive(c *gin.Context) {
+func (h *UserHandler) PostUsersSetIsActive(c *gin.Context) {
 	var request struct {
 		UserID   string `json:"user_id" binding:"required"`
 		IsActive bool   `json:"is_active" binding:"required"`
+	}
+
+	type response struct {
+		UserID   string `json:"user_id"`
+		UserName string `json:"username"`
+		TeamName string `json:"team_name"`
+		IsActive bool   `json:"is_active"`
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -65,5 +76,10 @@ func (h *UserHandler) SetUserIsActive(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	c.JSON(http.StatusOK, response{
+		UserID:   user.UserId,
+		UserName: user.Username,
+		TeamName: user.Team.Name,
+		IsActive: user.IsActive,
+	})
 }

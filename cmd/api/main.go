@@ -5,7 +5,7 @@ import (
 	"main/internal/config"
 	"main/internal/database"
 	"main/internal/delivery"
-	"main/internal/handlers"
+	"main/internal/delivery/handlers"
 	"main/internal/repository/gorm"
 	prusecase "main/internal/usecase/pullrequest"
 	teamusecase "main/internal/usecase/team"
@@ -31,13 +31,14 @@ func main() {
 	userUseCase := userusecase.NewUserUseCase(userRepo)
 	teamUseCase := teamusecase.NewTeamUseCase(teamRepo, userRepo)
 	prUseCase := prusecase.NewPullRequestUseCase(prRepo, userRepo, teamRepo)
-	_, _ = teamUseCase, prUseCase
 
 	// иницилазиация хендлеров
 	userHandler := handlers.NewUserHandler(userUseCase)
+	teamHandler := handlers.NewTeamHandler(teamUseCase)
+	prHandler := handlers.NewPRHandler(prUseCase)
 
 	// инициализация роутера
-	router := delivery.NewRouter(userHandler)
+	router := delivery.NewRouter(userHandler, teamHandler, prHandler)
 	ginRouter := router.SetupRoutes()
 
 	// запуск сервера

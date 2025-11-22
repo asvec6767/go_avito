@@ -1,6 +1,10 @@
 package team
 
-import "main/internal/domain"
+import (
+	"main/internal/domain"
+
+	"gorm.io/gorm"
+)
 
 type teamUseCase struct {
 	team domain.TeamRepository
@@ -30,9 +34,9 @@ func (uc *teamUseCase) GetById(id string) (*domain.Team, error) {
 	return uc.team.GetById(id)
 }
 
-// func (uc *teamUseCase) GetByName(name string) (*domain.Team, error) {
-// 	return uc.team.GetByName(name)
-// }
+func (uc *teamUseCase) GetByName(name string) (*domain.Team, error) {
+	return uc.team.GetByName(name)
+}
 
 func (uc *teamUseCase) AddUser(team_id, user_id string) error {
 	if _, err := uc.team.GetById(team_id); err != nil {
@@ -70,21 +74,24 @@ func (uc *teamUseCase) RemoveUser(user_id string) error {
 	return nil
 }
 
-func (uc *teamUseCase) SetUsers(team_id string, user_ids []string) error {
+func (uc *teamUseCase) SetUsers(team_id string, users []domain.User) error {
 	if _, err := uc.team.GetById(team_id); err != nil {
 		return err
 	}
 
-	for _, user_id := range user_ids {
-		user, err := uc.user.GetById(user_id)
-		if err != nil {
-			return err
-		}
-
-		user.TeamID = team_id
-
-		err = uc.user.Update(user)
-		if err != nil {
+	for _, user := range users {
+		_, err := uc.user.GetById(user.UserId)
+		switch err {
+		case gorm.ErrRecordNotFound: // Нет такого юзера - создать
+			if err := uc.user.Create(&user); err != nil {
+				return err
+			}
+		case nil: // Есть такой юзер - задать команду
+			user.TeamID = team_id
+			if err := uc.user.Update(&user); err != nil {
+				return err
+			}
+		default:
 			return err
 		}
 	}

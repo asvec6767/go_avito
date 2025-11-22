@@ -3,11 +3,12 @@ package domain
 import _ "gorm.io/gorm"
 
 type User struct {
-	ID       string `json:"id" gorm:"unique;not null;primarykey"`
-	Name     string `json:"name" gorm:"not null"`
-	IsActive bool   `json:"is_active" gorm:"default:false"`
-	TeamID   string `json:"team_id" gorm:"not null;index"`
-	Team     Team   `json:"team,omitempty" gorm:"foreignKey:TeamID"`
+	UserId       string `json:"user_id" gorm:"unique;not null;primarykey"`
+	Username     string `json:"username" gorm:"not null"`
+	IsActive     bool   `json:"is_active" gorm:"default:false"`
+	TeamID       string `json:"team_id,omitempty" gorm:"not null;index"`
+	Team         Team   `json:"team,omitempty" gorm:"foreignKey:TeamID"`
+	PullRequests []*PR  `json:"pullrequests" gorm:"many2many:pr_users"`
 }
 
 type UserRepository interface {

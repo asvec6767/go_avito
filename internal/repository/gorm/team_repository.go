@@ -30,19 +30,19 @@ func (r *teamRepository) GetById(id string) (*domain.Team, error) {
 	return &team, nil
 }
 
-// func (r *teamRepository) GetByName(name string) (*domain.Team, error) {
-// 	var team domain.Team
+func (r *teamRepository) GetByName(name string) (*domain.Team, error) {
+	var team domain.Team
 
-// 	err := r.db.Where("name = ?", name).First(&team).Error
-// 	if err != nil {
-// 		if err == gorm.ErrRecordNotFound {
-// 			return nil, domain.ErrUserNotFound
-// 		}
-// 		return nil, err
-// 	}
+	err := r.db.Where("name = ?", name).First(&team).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, domain.ErrUserNotFound
+		}
+		return nil, err
+	}
 
-// 	return &team, nil
-// }
+	return &team, nil
+}
 
 func (r *teamRepository) Create(team *domain.Team) error {
 	var existingTeam domain.Team

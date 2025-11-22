@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"fmt"
+	"main/internal/domain"
 	"main/internal/usecase"
 	"net/http"
 
@@ -19,44 +19,56 @@ func NewTeamHandler(teamUseCase usecase.TeamUseCase) *TeamHandler {
 // PostTeamAdd operation middleware
 func (h *TeamHandler) PostTeamAdd(c *gin.Context) {
 	// TeamMember defines model for TeamMember.
-	type TeamMember struct {
-		IsActive bool   `json:"is_active"`
-		UserId   string `json:"user_id"`
-		Username string `json:"username"`
-	}
+	// type TeamMember struct {
+	// 	IsActive bool   `json:"is_active"`
+	// 	UserId   string `json:"user_id"`
+	// 	Username string `json:"username"`
+	// }
 
 	// Team defines model for Team.
-	type Team struct {
-		Members  []TeamMember `json:"members"`
-		TeamName string       `json:"team_name"`
-	}
+	// type Team struct {
+	// 	Members  []TeamMember `json:"members"`
+	// 	TeamName string       `json:"team_name"`
+	// }
 
-	var request Team
+	// var request Team
+
+	var request struct {
+		Members  []domain.User `json:"members"`
+		TeamName string        `json:"team_name"`
+	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.Status(http.StatusBadRequest)
-		c.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	request.Body = &body
 
-	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
-		return sh.ssi.PostTeamAdd(ctx, request.(PostTeamAddRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PostTeamAdd")
-	}
-
-	response, err := handler(ctx, request)
-
+	team, err := h.teamUseCase.Create(request.TeamName)
 	if err != nil {
-		ctx.Error(err)
-		ctx.Status(http.StatusInternalServerError)
-	} else if validResponse, ok := response.(PostTeamAddResponseObject); ok {
-		if err := validResponse.VisitPostTeamAddResponse(ctx.Writer); err != nil {
-			ctx.Error(err)
-		}
-	} else if response != nil {
-		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
+
+	if err = h.teamUseCase.SetUsers(team.ID, request.Members); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, team)
+}
+
+func (h *TeamHandler) GetTeamGet(c *gin.Context) {
+	teamName := c.Param("team_name")
+	if teamName == "" {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Query argument is required, but not found"})
+		return
+	}
+
+	team, err := h.teamUseCase.GetByName(teamName)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, team)
 }

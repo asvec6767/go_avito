@@ -46,7 +46,7 @@ func (r *userRepository) GetById(id string) (*domain.User, error) {
 
 func (r *userRepository) Create(user *domain.User) error {
 	var existingUser domain.User
-	err := r.db.Where("name = ?", user.Name).First(&existingUser).Error
+	err := r.db.Where("username = ?", user.Username).First(&existingUser).Error
 	if err == nil {
 		return domain.ErrUserAlreadyExists
 	}
