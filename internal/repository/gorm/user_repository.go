@@ -16,7 +16,7 @@ func NewUserRepository(db *gorm.DB) domain.UserRepository {
 	}
 }
 
-func (r *userRepository) GetById(id int) (*domain.User, error) {
+func (r *userRepository) GetById(id string) (*domain.User, error) {
 	var user domain.User
 
 	err := r.db.First(&user, id).Error
@@ -30,32 +30,31 @@ func (r *userRepository) GetById(id int) (*domain.User, error) {
 	return &user, nil
 }
 
-func (r *userRepository) GetByName(name string) (*domain.User, error) {
-	var user domain.User
+// func (r *userRepository) GetByName(name string) (*domain.User, error) {
+// 	var user domain.User
 
-	err := r.db.Where("name = ?", name).First(&user).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, domain.ErrUserNotFound
-		}
-		return nil, err
-	}
+// 	err := r.db.Where("name = ?", name).First(&user).Error
+// 	if err != nil {
+// 		if err == gorm.ErrRecordNotFound {
+// 			return nil, domain.ErrUserNotFound
+// 		}
+// 		return nil, err
+// 	}
 
-	return &user, nil
-}
+// 	return &user, nil
+// }
 
-func (r *userRepository) Create(user *domain.User) (int, error) {
+func (r *userRepository) Create(user *domain.User) error {
 	var existingUser domain.User
 	err := r.db.Where("name = ?", user.Name).First(&existingUser).Error
 	if err == nil {
-		return 0, domain.ErrUserAlreadyExists
+		return domain.ErrUserAlreadyExists
 	}
 	if err != gorm.ErrRecordNotFound {
-		return 0, err
+		return err
 	}
 
-	err = r.db.Create(user).Error
-	return int(user.ID), err
+	return r.db.Create(user).Error
 }
 
 func (r *userRepository) Update(user *domain.User) error {
@@ -69,7 +68,7 @@ func (r *userRepository) Update(user *domain.User) error {
 	return nil
 }
 
-func (r *userRepository) Delete(id int) error {
+func (r *userRepository) Delete(id string) error {
 	result := r.db.Delete(&domain.User{}, id)
 	if result.Error != nil {
 		return result.Error

@@ -20,7 +20,7 @@ func NewPullRequestUseCase(prRepo domain.PRRepository, userRepo domain.UserRepos
 	}
 }
 
-func (uc *pullRequestUseCase) Create(name string, author_id int) (*domain.PR, error) {
+func (uc *pullRequestUseCase) Create(name string, author_id string) (*domain.PR, error) {
 	user, err := uc.user.GetById(author_id)
 	if err != nil {
 		return nil, err
@@ -35,29 +35,26 @@ func (uc *pullRequestUseCase) Create(name string, author_id int) (*domain.PR, er
 		Name:     name,
 		Status:   domain.PullRequestStatusOpen,
 		AuthorID: author_id,
-		TeamID:   int(team.ID),
+		TeamID:   team.ID,
 	}
 
-	pr_id, err := uc.pr.Create(pr)
-	if err != nil {
+	if err := uc.pr.Create(pr); err != nil {
 		return nil, err
 	}
-
-	pr.ID = uint(pr_id)
 
 	return pr, nil
 }
 
-func (uc *pullRequestUseCase) GetById(id int) (*domain.PR, error) {
+func (uc *pullRequestUseCase) GetById(id string) (*domain.PR, error) {
 	return uc.pr.GetById(id)
 }
 
-func (uc *pullRequestUseCase) GetByName(name string) (*domain.PR, error) {
-	return uc.pr.GetByName(name)
-}
+// func (uc *pullRequestUseCase) GetByName(name string) (*domain.PR, error) {
+// 	return uc.pr.GetByName(name)
+// }
 
 // TODO: сделать норм ошибку
-func (uc *pullRequestUseCase) ChangeAllReviewers(id int) (*domain.PR, error) {
+func (uc *pullRequestUseCase) ChangeAllReviewers(id string) (*domain.PR, error) {
 	pullrequest, err := uc.pr.GetById(id)
 	if err != nil {
 		return nil, err
@@ -111,7 +108,7 @@ func setNRandomReviewers(users []*domain.User, count int) []*domain.User {
 
 // TODO: сделать норм ошибку
 // TODO: сделать чтобы заменялся один reviewer а не сразу все
-func (uc *pullRequestUseCase) ChangeReviewer(pr_id, old_reviewer_id int) (*domain.PR, error) {
+func (uc *pullRequestUseCase) ChangeReviewer(pr_id, old_reviewer_id string) (*domain.PR, error) {
 	pullrequest, err := uc.pr.GetById(pr_id)
 	if err != nil {
 		return nil, err
@@ -147,7 +144,7 @@ func (uc *pullRequestUseCase) ChangeReviewer(pr_id, old_reviewer_id int) (*domai
 	return pullrequest, nil
 }
 
-func (uc *pullRequestUseCase) SetMergedStatus(pr_id int) (*domain.PR, error) {
+func (uc *pullRequestUseCase) SetMergedStatus(pr_id string) (*domain.PR, error) {
 	pullrequest, err := uc.pr.GetById(pr_id)
 	if err != nil {
 		return nil, err
@@ -163,7 +160,7 @@ func (uc *pullRequestUseCase) SetMergedStatus(pr_id int) (*domain.PR, error) {
 	return pullrequest, nil
 }
 
-func (uc *pullRequestUseCase) SetOpenStatus(pr_id int) (*domain.PR, error) {
+func (uc *pullRequestUseCase) SetOpenStatus(pr_id string) (*domain.PR, error) {
 	pullrequest, err := uc.pr.GetById(pr_id)
 	if err != nil {
 		return nil, err
@@ -179,6 +176,6 @@ func (uc *pullRequestUseCase) SetOpenStatus(pr_id int) (*domain.PR, error) {
 	return pullrequest, nil
 }
 
-func (uc *pullRequestUseCase) Delete(id int) error {
+func (uc *pullRequestUseCase) Delete(id string) error {
 	return uc.pr.Delete(id)
 }

@@ -16,7 +16,7 @@ func NewTeamRepository(db *gorm.DB) domain.TeamRepository {
 	}
 }
 
-func (r *teamRepository) GetById(id int) (*domain.Team, error) {
+func (r *teamRepository) GetById(id string) (*domain.Team, error) {
 	var team domain.Team
 
 	err := r.db.First(&team, id).Error
@@ -30,32 +30,32 @@ func (r *teamRepository) GetById(id int) (*domain.Team, error) {
 	return &team, nil
 }
 
-func (r *teamRepository) GetByName(name string) (*domain.Team, error) {
-	var team domain.Team
+// func (r *teamRepository) GetByName(name string) (*domain.Team, error) {
+// 	var team domain.Team
 
-	err := r.db.Where("name = ?", name).First(&team).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, domain.ErrUserNotFound
-		}
-		return nil, err
-	}
+// 	err := r.db.Where("name = ?", name).First(&team).Error
+// 	if err != nil {
+// 		if err == gorm.ErrRecordNotFound {
+// 			return nil, domain.ErrUserNotFound
+// 		}
+// 		return nil, err
+// 	}
 
-	return &team, nil
-}
+// 	return &team, nil
+// }
 
-func (r *teamRepository) Create(team *domain.Team) (int, error) {
+func (r *teamRepository) Create(team *domain.Team) error {
 	var existingTeam domain.Team
 	err := r.db.Where("name = ?", team.Name).First(&existingTeam).Error
 	if err == nil {
-		return 0, domain.ErrTeamAlreadyExists
+		return domain.ErrTeamAlreadyExists
 	}
 	if err != gorm.ErrRecordNotFound {
-		return 0, err
+		return err
 	}
 
 	err = r.db.Create(team).Error
-	return int(team.ID), err
+	return err
 }
 
 func (r *teamRepository) Update(team *domain.Team) error {
@@ -69,7 +69,7 @@ func (r *teamRepository) Update(team *domain.Team) error {
 	return nil
 }
 
-func (r *teamRepository) Delete(id int) error {
+func (r *teamRepository) Delete(id string) error {
 	result := r.db.Delete(&domain.Team{}, id)
 	if result.Error != nil {
 		return result.Error

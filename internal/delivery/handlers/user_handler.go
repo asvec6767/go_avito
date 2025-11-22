@@ -3,7 +3,6 @@ package handlers
 import (
 	"main/internal/usecase"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,12 +18,7 @@ func NewUserHandler(userUseCase usecase.UserUseCase) *UserHandler {
 }
 
 func (h *UserHandler) GetUser(c *gin.Context) {
-	id_str := c.Param("id")
-	id, err := strconv.Atoi(id_str)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+	id := c.Param("id")
 
 	user, err := h.userUseCase.GetById(id)
 	if err != nil {
@@ -56,8 +50,8 @@ func (h *UserHandler) Createuser(c *gin.Context) {
 
 func (h *UserHandler) SetUserIsActive(c *gin.Context) {
 	var request struct {
-		UserID   int  `json:"user_id" binding:"required"`
-		IsActive bool `json:"is_active" binding:"required"`
+		UserID   string `json:"user_id" binding:"required"`
+		IsActive bool   `json:"is_active" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {

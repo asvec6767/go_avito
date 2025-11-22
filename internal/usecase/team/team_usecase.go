@@ -19,25 +19,22 @@ func (uc *teamUseCase) Create(name string) (*domain.Team, error) {
 		Name: name,
 	}
 
-	id, err := uc.team.Create(team)
-	if err != nil {
+	if err := uc.team.Create(team); err != nil {
 		return nil, err
 	}
-
-	team.ID = uint(id)
 
 	return team, nil
 }
 
-func (uc *teamUseCase) GetById(id int) (*domain.Team, error) {
+func (uc *teamUseCase) GetById(id string) (*domain.Team, error) {
 	return uc.team.GetById(id)
 }
 
-func (uc *teamUseCase) GetByName(name string) (*domain.Team, error) {
-	return uc.team.GetByName(name)
-}
+// func (uc *teamUseCase) GetByName(name string) (*domain.Team, error) {
+// 	return uc.team.GetByName(name)
+// }
 
-func (uc *teamUseCase) AddUser(team_id, user_id int) error {
+func (uc *teamUseCase) AddUser(team_id, user_id string) error {
 	if _, err := uc.team.GetById(team_id); err != nil {
 		return err
 	}
@@ -57,13 +54,13 @@ func (uc *teamUseCase) AddUser(team_id, user_id int) error {
 	return nil
 }
 
-func (uc *teamUseCase) RemoveUser(user_id int) error {
+func (uc *teamUseCase) RemoveUser(user_id string) error {
 	user, err := uc.user.GetById(user_id)
 	if err != nil {
 		return err
 	}
 
-	user.TeamID = 0
+	user.TeamID = ""
 
 	err = uc.user.Update(user)
 	if err != nil {
@@ -73,7 +70,7 @@ func (uc *teamUseCase) RemoveUser(user_id int) error {
 	return nil
 }
 
-func (uc *teamUseCase) SetUsers(team_id int, user_ids []int) error {
+func (uc *teamUseCase) SetUsers(team_id string, user_ids []string) error {
 	if _, err := uc.team.GetById(team_id); err != nil {
 		return err
 	}
@@ -95,7 +92,7 @@ func (uc *teamUseCase) SetUsers(team_id int, user_ids []int) error {
 	return nil
 }
 
-func (uc *teamUseCase) RemoveAllUsers(team_id int) error {
+func (uc *teamUseCase) RemoveAllUsers(team_id string) error {
 	team, err := uc.team.GetById(team_id)
 	if err != nil {
 		return err
@@ -107,7 +104,7 @@ func (uc *teamUseCase) RemoveAllUsers(team_id int) error {
 	// }
 
 	for _, user := range team.Users {
-		user.TeamID = 0
+		user.TeamID = ""
 
 		err = uc.user.Update(user)
 		if err != nil {
@@ -118,7 +115,7 @@ func (uc *teamUseCase) RemoveAllUsers(team_id int) error {
 	return nil
 }
 
-func (uc *teamUseCase) Delete(id int) error {
+func (uc *teamUseCase) Delete(id string) error {
 	if err := uc.RemoveAllUsers(id); err != nil {
 		return err
 	}

@@ -19,23 +19,20 @@ func (uc *userUseCase) Create(name string) (*domain.User, error) {
 		// TeamID: 0,
 	}
 
-	id, err := uc.user.Create(user)
-	if err != nil {
+	if err := uc.user.Create(user); err != nil {
 		return nil, err
 	}
-
-	user.ID = uint(id)
 
 	return user, nil
 }
 
-func (uc *userUseCase) GetById(id int) (*domain.User, error) {
+func (uc *userUseCase) GetById(id string) (*domain.User, error) {
 	return uc.user.GetById(id)
 }
 
-func (uc *userUseCase) GetByName(name string) (*domain.User, error) {
-	return uc.user.GetByName(name)
-}
+// func (uc *userUseCase) GetByName(name string) (*domain.User, error) {
+// 	return uc.user.GetByName(name)
+// }
 
 // func (uc *userUseCase) GetList(ids []int) ([]*domain.User, error) {
 // 	return uc.user.GetList(ids)
@@ -45,7 +42,7 @@ func (uc *userUseCase) GetByName(name string) (*domain.User, error) {
 // 	return uc.user.GetListByTeamId(id)
 // }
 
-func (uc *userUseCase) Activate(id int) (*domain.User, error) {
+func (uc *userUseCase) Activate(id string) (*domain.User, error) {
 	user, err := uc.user.GetById(id)
 	if err != nil {
 		return nil, err
@@ -61,7 +58,7 @@ func (uc *userUseCase) Activate(id int) (*domain.User, error) {
 	return user, nil
 }
 
-func (uc *userUseCase) Deactivate(id int) (*domain.User, error) {
+func (uc *userUseCase) Deactivate(id string) (*domain.User, error) {
 	user, err := uc.user.GetById(id)
 	if err != nil {
 		return nil, err
@@ -77,7 +74,7 @@ func (uc *userUseCase) Deactivate(id int) (*domain.User, error) {
 	return user, nil
 }
 
-func (uc *userUseCase) SetIsActive(id int, status bool) (*domain.User, error) {
+func (uc *userUseCase) SetIsActive(id string, status bool) (*domain.User, error) {
 	user, err := uc.user.GetById(id)
 	if err != nil {
 		return nil, err
@@ -93,6 +90,6 @@ func (uc *userUseCase) SetIsActive(id int, status bool) (*domain.User, error) {
 	return user, nil
 }
 
-func (uc *userUseCase) Delete(id int) error {
+func (uc *userUseCase) Delete(id string) error {
 	return uc.user.Delete(id)
 }
