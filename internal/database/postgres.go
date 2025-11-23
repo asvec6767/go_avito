@@ -1,7 +1,7 @@
 package database
 
 import (
-	"main/internal/domain"
+	"main/internal/repository/gorm/models"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -17,7 +17,7 @@ func NewPostgresConn(dsn string) (*gorm.DB, error) {
 	}
 
 	// авто миграции
-	err = db.AutoMigrate(&domain.User{}, &domain.Team{}, &domain.PR{})
+	err = db.AutoMigrate(&models.UserModel{}, &models.TeamModel{}, &models.PRModel{})
 	if err != nil {
 		return nil, err
 	}

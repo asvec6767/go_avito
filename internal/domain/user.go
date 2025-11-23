@@ -1,22 +1,24 @@
 package domain
 
-import _ "gorm.io/gorm"
+import (
+	"context"
+)
 
 type User struct {
-	UserId       string `json:"user_id" gorm:"unique;not null;primarykey"`
-	Username     string `json:"username" gorm:"not null"`
-	IsActive     bool   `json:"is_active" gorm:"default:false"`
-	TeamID       string `json:"team_id,omitempty" gorm:"not null;index"`
-	Team         Team   `json:"team,omitempty" gorm:"foreignKey:TeamID"`
-	PullRequests []*PR  `json:"pullrequests" gorm:"many2many:pr_users"`
+	ID       string
+	Username string
+	Email    string
+	IsActive bool
+	TeamID   string
 }
 
 type UserRepository interface {
-	GetById(id string) (*User, error)
+	GetById(ctx context.Context, id string) (*User, error)
+	GetByActiveAndTeam(ctx context.Context, team_id string) ([]User, error)
 	// GetByName(name string) (*User, error)
 	// GetListByTeamId(id int) ([]*User, error)
 	// GetList(ids []int) ([]*User, error)
-	Create(user *User) error
-	Update(user *User) error
-	Delete(id string) error
+	Create(ctx context.Context, user *User) error
+	Update(ctx context.Context, user *User) error
+	Delete(ctx context.Context, id string) error
 }

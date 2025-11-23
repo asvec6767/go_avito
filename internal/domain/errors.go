@@ -3,13 +3,19 @@ package domain
 import "errors"
 
 var (
-	ErrNotFound          = errors.New("объект не найден")
+	ErrNotFound     = errors.New("объект не найден")
+	ErrInvalidInput = errors.New("не валидный ввод данных")
+	ErrAccessDenied = errors.New("доступ запрещен")
+
 	ErrUserNotFound      = errors.New("пользователь не найден")
-	ErrTeamNotFound      = errors.New("команда не найдена")
-	ErrPRNotFound        = errors.New("пул реквест не найден")
 	ErrUserAlreadyExists = errors.New("пользователь уже существует")
+	ErrUserNotActive     = errors.New("пользователь не активен")
+
+	ErrTeamNotFound      = errors.New("команда не найдена")
 	ErrTeamAlreadyExists = errors.New("команда уже существует")
-	ErrPRAlreadyExists   = errors.New("пул реквест уже существует")
-	ErrInvalidInput      = errors.New("не валидный ввод данных")
-	ErrAccessDenied      = errors.New("доступ запрещен")
+
+	ErrPRNotFound           = errors.New("пул реквест не найден")
+	ErrPRAlreadyExists      = errors.New("пул реквест уже существует")
+	ErrPRAlreadyMerged      = errors.New("пул реквест не уже замерджен")
+	ErrNoReviewersAvailable = errors.New("нет активных ревьюверов")
 )

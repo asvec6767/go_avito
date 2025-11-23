@@ -1,7 +1,9 @@
 package gorm
 
 import (
+	"context"
 	"main/internal/domain"
+	"main/internal/repository/gorm/models"
 
 	"gorm.io/gorm"
 )
@@ -16,10 +18,10 @@ func NewPRRepository(db *gorm.DB) domain.PRRepository {
 	}
 }
 
-func (r *prRepository) GetById(id string) (*domain.PR, error) {
-	var pr domain.PR
+func (r *prRepository) GetById(ctx context.Context, id string) (*domain.PR, error) {
+	var model models.PRModel
 
-	err := r.db.First(&pr, id).Error
+	err := r.db.WithContext(ctx).First(&model, "id = ?", id).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, domain.ErrPRNotFound
@@ -27,26 +29,33 @@ func (r *prRepository) GetById(id string) (*domain.PR, error) {
 		return nil, err
 	}
 
+	pr := model.ToDomain()
+
 	return &pr, nil
 }
 
-// func (r *prRepository) GetByName(name string) (*domain.PR, error) {
-// 	var pr domain.PR
+func (r *prRepository) GetWithReviewers(ctx context.Context, id string) (*domain.PR, error) {
+	var model models.PRModel
 
-// 	err := r.db.Where("name = ?", name).First(&pr).Error
-// 	if err != nil {
-// 		if err == gorm.ErrRecordNotFound {
-// 			return nil, domain.ErrPRNotFound
-// 		}
-// 		return nil, err
-// 	}
+	err := r.db.WithContext(ctx).
+		Preload("Reviewers", "is_active = ?", true).
+		First(&model, "id = ?", id).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, domain.ErrPRNotFound
+		}
+		return nil, err
+	}
 
-// 	return &pr, nil
-// }
+	pr := model.ToDomain()
 
-func (r *prRepository) Create(pr *domain.PR) error {
-	var existingPR domain.PR
-	err := r.db.Where("name = ?", pr.Name).First(&existingPR).Error
+	return &pr, nil
+}
+
+func (r *prRepository) Create(ctx context.Context, pr *domain.PR) error {
+	var existingPRModel models.PRModel
+
+	err := r.db.WithContext(ctx).First(&existingPRModel, "name = ?", pr.Name).Error
 	if err == nil {
 		return domain.ErrPRAlreadyExists
 	}
@@ -54,12 +63,15 @@ func (r *prRepository) Create(pr *domain.PR) error {
 		return err
 	}
 
-	err = r.db.Create(pr).Error
-	return err
+	model := models.PRToModel(*pr)
+
+	return r.db.WithContext(ctx).Create(&model).Error
 }
 
-func (r *prRepository) Update(pr *domain.PR) error {
-	result := r.db.Save(pr)
+func (r *prRepository) Update(ctx context.Context, pr *domain.PR) error {
+	model := models.PRToModel(*pr)
+
+	result := r.db.WithContext(ctx).Save(&model)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -69,8 +81,8 @@ func (r *prRepository) Update(pr *domain.PR) error {
 	return nil
 }
 
-func (r *prRepository) Delete(id string) error {
-	result := r.db.Delete(&domain.PR{}, id)
+func (r *prRepository) Delete(ctx context.Context, id string) error {
+	result := r.db.WithContext(ctx).Delete(&models.PRModel{}, id)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -78,4 +90,42 @@ func (r *prRepository) Delete(id string) error {
 		return domain.ErrPRNotFound
 	}
 	return nil
+}
+
+func (r *prRepository) GetByReviewerAndStatus(ctx context.Context, reviewerID string, status domain.PRStatus) ([]domain.PR, error) {
+	var models []models.PRModel
+
+	// TODO: перепроверить правильность JOIN
+	err := r.db.WithContext(ctx).
+		Joins("JOIN pr_reviewers ON pr_reviewers.pr_model_id = pull_requests.id").
+		Where("pr_reviewers.user_model_user_id = ? AND status = ?", reviewerID, status).
+		Find(&models).Error
+	if err != nil {
+		return nil, err
+	}
+
+	prs := make([]domain.PR, len(models))
+	for i, model := range models {
+		prs[i] = model.ToDomain()
+	}
+
+	return prs, nil
+}
+
+func (r *prRepository) GetByTeam(ctx context.Context, teamID string) ([]domain.PR, error) {
+	var models []models.PRModel
+
+	err := r.db.WithContext(ctx).
+		Where("team_id = ?", teamID).
+		Find(&models).Error
+	if err != nil {
+		return nil, err
+	}
+
+	prs := make([]domain.PR, len(models))
+	for i, model := range models {
+		prs[i] = model.ToDomain()
+	}
+
+	return prs, nil
 }

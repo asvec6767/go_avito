@@ -4,6 +4,8 @@ import (
 	"main/internal/usecase"
 	"net/http"
 
+	prusecase "main/internal/usecase/pullrequest"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -36,25 +38,24 @@ func (h *PRHandler) PostPullRequestCreate(c *gin.Context) {
 		return
 	}
 
-	if _, err := h.prUseCase.GetById(request.PullRequestId); err == nil {
+	if _, err := h.prUseCase.GetById(c.Request.Context(), request.PullRequestId); err == nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "pull request уже существует"})
 	}
 
-	pr, err := h.prUseCase.Create(request.PullRequestId, request.PullRequestName, request.AuthorId)
+	pr, err := h.prUseCase.Create(c.Request.Context(), &prusecase.CreatePRRequest{
+		ID:       request.PullRequestId,
+		Name:     request.PullRequestName,
+		AuthorID: request.AuthorId,
+	})
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err})
 		return
 	}
 
-	pr, err = h.prUseCase.ChangeAllReviewers(pr.ID)
+	pr, err = h.prUseCase.ChangeAllReviewers(c.Request.Context(), pr.ID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err})
 		return
-	}
-
-	var reviewer_ids []string
-	for _, reviewer := range pr.Reviewers {
-		reviewer_ids = append(reviewer_ids, reviewer.UserId)
 	}
 
 	c.JSON(http.StatusCreated, PRResponse{
@@ -62,7 +63,7 @@ func (h *PRHandler) PostPullRequestCreate(c *gin.Context) {
 		PullRequestName:   pr.Name,
 		AuthorId:          pr.AuthorID,
 		Status:            string(pr.Status),
-		AssignedReviewers: reviewer_ids,
+		AssignedReviewers: pr.ReviewerIDs,
 	})
 }
 
@@ -80,15 +81,10 @@ func (h *PRHandler) PostPullRequestMerge(c *gin.Context) {
 		return
 	}
 
-	pr, err := h.prUseCase.SetMergedStatus(request.PullRequestId)
+	pr, err := h.prUseCase.SetMergedStatus(c.Request.Context(), request.PullRequestId)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err})
 		return
-	}
-
-	var reviewer_ids []string
-	for _, reviewer := range pr.Reviewers {
-		reviewer_ids = append(reviewer_ids, reviewer.UserId)
 	}
 
 	c.JSON(http.StatusCreated, response{
@@ -97,7 +93,7 @@ func (h *PRHandler) PostPullRequestMerge(c *gin.Context) {
 			PullRequestName:   pr.Name,
 			AuthorId:          pr.AuthorID,
 			Status:            string(pr.Status),
-			AssignedReviewers: reviewer_ids,
+			AssignedReviewers: pr.ReviewerIDs,
 			MergedAt:          pr.MergedAt.Format("2025-10-24T12:34:56Z"),
 		},
 	})
@@ -120,15 +116,10 @@ func (h *PRHandler) PostPullRequestReassign(c *gin.Context) {
 	}
 
 	// TODO: доделать все варианты ошибок
-	pr, replaced_by, err := h.prUseCase.ChangeReviewer(request.PullRequestId, request.OldUserId)
+	pr, replaced_by, err := h.prUseCase.ChangeReviewer(c.Request.Context(), request.PullRequestId, request.OldUserId)
 	if err != nil {
 		c.JSON(http.StatusConflict, gin.H{"error": err})
 		return
-	}
-
-	var reviewer_ids []string
-	for _, reviewer := range pr.Reviewers {
-		reviewer_ids = append(reviewer_ids, reviewer.UserId)
 	}
 
 	c.JSON(http.StatusOK, response{
@@ -137,9 +128,9 @@ func (h *PRHandler) PostPullRequestReassign(c *gin.Context) {
 			PullRequestName:   pr.Name,
 			AuthorId:          pr.AuthorID,
 			Status:            string(pr.Status),
-			AssignedReviewers: reviewer_ids,
+			AssignedReviewers: pr.ReviewerIDs,
 		},
-		ReplacedBy: replaced_by.UserId,
+		ReplacedBy: replaced_by.ID,
 	})
 }
 
@@ -155,7 +146,7 @@ func (h *PRHandler) GetUsersGetReview(c *gin.Context) {
 		return
 	}
 
-	prs, err := h.prUseCase.GetListByUserId(userId)
+	prs, err := h.prUseCase.GetListByUserId(c.Request.Context(), userId)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return

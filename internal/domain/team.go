@@ -1,18 +1,16 @@
 package domain
 
-import _ "gorm.io/gorm"
+import "context"
 
 type Team struct {
-	ID    string  `json:"id" gorm:"unique;not null;primarykey"`
-	Name  string  `json:"team_name" gorm:"not null;unique"`
-	Users []*User `json:"users,omitempty" gorm:"foreignKey:TeamID"`
-	PRs   []*PR   `json:"prs,omitempty" gorm:"foreignKey:TeamID"`
+	ID   string
+	Name string
 }
 
 type TeamRepository interface {
-	GetById(id string) (*Team, error)
-	GetByName(name string) (*Team, error)
-	Create(team *Team) error
-	Update(team *Team) error
-	Delete(id string) error
+	GetById(ctx context.Context, id string) (*Team, error)
+	GetByName(ctx context.Context, name string) (*Team, error)
+	Create(ctx context.Context, team *Team) error
+	Update(ctx context.Context, team *Team) error
+	Delete(ctx context.Context, id string) error
 }

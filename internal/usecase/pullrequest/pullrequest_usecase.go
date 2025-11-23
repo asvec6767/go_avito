@@ -1,16 +1,25 @@
 package pullrequest
 
 import (
+	"context"
 	"main/internal/domain"
 	"math/rand/v2"
 	"slices"
 	"time"
 )
 
+const reviewers_count_default = 2 //кол-во ревьюверов на пулл реквесте
+
 type pullRequestUseCase struct {
 	pr   domain.PRRepository
 	user domain.UserRepository
 	team domain.TeamRepository
+}
+
+type CreatePRRequest struct {
+	ID       string
+	Name     string
+	AuthorID string
 }
 
 func NewPullRequestUseCase(prRepo domain.PRRepository, userRepo domain.UserRepository, teamRepo domain.TeamRepository) *pullRequestUseCase {
@@ -21,160 +30,198 @@ func NewPullRequestUseCase(prRepo domain.PRRepository, userRepo domain.UserRepos
 	}
 }
 
-func (uc *pullRequestUseCase) Create(pr_id, pr_name, author_id string) (*domain.PR, error) {
-	user, err := uc.user.GetById(author_id)
+func (uc *pullRequestUseCase) Create(ctx context.Context, req *CreatePRRequest) (*domain.PR, error) {
+	user, err := uc.user.GetById(ctx, req.AuthorID)
 	if err != nil {
 		return nil, err
 	}
 
-	team, err := uc.team.GetById(user.TeamID)
+	if !user.IsActive {
+		return nil, domain.ErrUserNotActive
+	}
+
+	team, err := uc.team.GetById(ctx, user.TeamID)
 	if err != nil {
 		return nil, err
 	}
 
 	pr := &domain.PR{
-		ID:       pr_id,
-		Name:     pr_name,
+		ID:       req.ID,
+		Name:     req.Name,
 		Status:   domain.PullRequestStatusOpen,
-		AuthorID: author_id,
+		AuthorID: req.AuthorID,
 		TeamID:   team.ID,
 	}
 
-	if err := uc.pr.Create(pr); err != nil {
+	if err := uc.pr.Create(ctx, pr); err != nil {
+		return nil, err
+	}
+
+	pr, err = uc.ChangeAllReviewers(ctx, pr.ID)
+	if err != nil {
 		return nil, err
 	}
 
 	return pr, nil
 }
 
-func (uc *pullRequestUseCase) GetById(id string) (*domain.PR, error) {
-	return uc.pr.GetById(id)
+func (uc *pullRequestUseCase) GetById(ctx context.Context, id string) (*domain.PR, error) {
+	return uc.pr.GetById(ctx, id)
 }
 
-// func (uc *pullRequestUseCase) GetByName(name string) (*domain.PR, error) {
-// 	return uc.pr.GetByName(name)
-// }
+func (uc *pullRequestUseCase) GetPRWithReviewers(ctx context.Context, id string) (*domain.PR, error) {
+	pr, err := uc.pr.GetWithReviewers(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return pr, nil
+}
 
-// TODO: сделать норм ошибку
-func (uc *pullRequestUseCase) ChangeAllReviewers(id string) (*domain.PR, error) {
-	const reviewers_count_default = 2
+func (uc *pullRequestUseCase) ChangeReviewer(ctx context.Context, pr_id, old_reviewer_id string) (*domain.PR, *domain.User, error) {
+	pr, err := uc.pr.GetById(ctx, pr_id)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	pullrequest, err := uc.pr.GetById(id)
+	if pr.MergedAt != nil || pr.Status != domain.PullRequestStatusOpen {
+		return nil, nil, domain.ErrPRAlreadyMerged
+	}
+
+	old_reviewers_ids := pr.ReviewerIDs
+
+	err = uc.assignReviewers(ctx, pr_id, append(old_reviewers_ids, pr.AuthorID), 1)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pr, err = uc.pr.GetById(ctx, pr_id)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	id_reviewer_replaced_by := ""
+	if len(pr.ReviewerIDs) >= 1 {
+		id_reviewer_replaced_by = pr.ReviewerIDs[0]
+	}
+
+	for _, id := range old_reviewers_ids {
+		if id != old_reviewer_id {
+			pr.ReviewerIDs = append(pr.ReviewerIDs, id)
+		}
+	}
+
+	reviewer_replaced_by, err := uc.user.GetById(ctx, id_reviewer_replaced_by)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return pr, reviewer_replaced_by, nil
+}
+
+func (uc *pullRequestUseCase) ChangeAllReviewers(ctx context.Context, pr_id string) (*domain.PR, error) {
+	pr, err := uc.pr.GetById(ctx, pr_id)
 	if err != nil {
 		return nil, err
 	}
 
-	if pullrequest.Status == domain.PullRequestStatusMerged {
-		return nil, domain.ErrAccessDenied
-		// return nil, fmt.Errorf("невозможно изменить pullrequest в статусе merged")
+	if pr.MergedAt != nil || pr.Status != domain.PullRequestStatusOpen {
+		return nil, domain.ErrPRAlreadyMerged
 	}
 
-	author, err := uc.user.GetById(pullrequest.AuthorID)
+	err = uc.assignReviewers(ctx, pr_id, []string{pr.AuthorID}, reviewers_count_default)
 	if err != nil {
 		return nil, err
 	}
 
-	team, err := uc.team.GetById(author.TeamID)
+	pr, err = uc.pr.GetById(ctx, pr_id)
 	if err != nil {
 		return nil, err
 	}
 
-	users := team.Users
+	return pr, nil
+}
 
-	users = removeUserFromUsersList(users, author)
-	pullrequest.Reviewers = setNRandomReviewers(users, min(reviewers_count_default, len(users)))
+func (uc *pullRequestUseCase) assignReviewers(ctx context.Context, pr_id string, notAvailableReviewerIDs []string, reviewers_count_default int) error {
+	pr, err := uc.pr.GetById(ctx, pr_id)
+	if err != nil {
+		return err
+	}
+
+	teamUsers, err := uc.user.GetByActiveAndTeam(ctx, pr.TeamID)
+	if err != nil {
+		return err
+	}
+
+	var availableReviewers []domain.User
+	for _, user := range teamUsers {
+		if idx := slices.IndexFunc(notAvailableReviewerIDs, func(c string) bool { return c == user.ID }); idx < 0 {
+			availableReviewers = append(availableReviewers, user)
+		}
+	}
+
+	reviewerIDs := uc.selectReviewers(availableReviewers, min(len(availableReviewers), reviewers_count_default))
+
+	pr.ReviewerIDs = reviewerIDs
+	if err := uc.pr.Update(ctx, pr); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (uc *pullRequestUseCase) selectReviewers(users []domain.User, count int) []string {
+	if len(users) <= count {
+		ids := make([]string, len(users))
+		for i, user := range users {
+			ids[i] = user.ID
+		}
+		return ids
+	}
+
+	rand.Shuffle(len(users), func(i, j int) {
+		users[i], users[j] = users[j], users[i]
+	})
+
+	reviewer_ids := make([]string, count)
+	for i := 0; i < count; i++ {
+		reviewer_ids[i] = users[i].ID
+	}
+
+	return reviewer_ids
+}
+
+func (uc *pullRequestUseCase) SetMergedStatus(ctx context.Context, pr_id string) (*domain.PR, error) {
+	pullrequest, err := uc.pr.GetById(ctx, pr_id)
+	if err != nil {
+		return nil, err
+	}
+
+	if pullrequest.Status != domain.PullRequestStatusOpen {
+		return nil, domain.ErrPRAlreadyMerged
+	}
+
+	if pullrequest.MergedAt != nil {
+		now := time.Now()
+		pullrequest.Status = domain.PullRequestStatusMerged
+		pullrequest.MergedAt = &now
+	}
+
+	if err := uc.pr.Update(ctx, pullrequest); err != nil {
+		return nil, err
+	}
 
 	return pullrequest, nil
 }
 
-func removeUserFromUsersList(users []*domain.User, user *domain.User) []*domain.User {
-	idx := slices.IndexFunc(users, func(u *domain.User) bool { return u.UserId == user.UserId })
-
-	new_slice := make([]*domain.User, 0)
-	new_slice = append(new_slice, users[:idx]...)
-	return append(new_slice, users[idx+1:]...)
-}
-
-func addRandomReviewer(reviewers []*domain.User, users []*domain.User) []*domain.User {
-	rand_user := users[rand.IntN(len(users))]
-
-	return append(reviewers, rand_user)
-}
-
-func setNRandomReviewers(users []*domain.User, count int) []*domain.User {
-	var reviewers []*domain.User
-	for range count {
-		reviewers = addRandomReviewer(reviewers, users)
-		users = removeUserFromUsersList(users, reviewers[len(reviewers)-1])
-	}
-	return reviewers
-}
-
-// TODO: сделать норм ошибку
-func (uc *pullRequestUseCase) ChangeReviewer(pr_id, old_reviewer_id string) (*domain.PR, *domain.User, error) {
-	pullrequest, err := uc.pr.GetById(pr_id)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if pullrequest.Status == domain.PullRequestStatusMerged {
-		return nil, nil, domain.ErrAccessDenied
-		// return nil, fmt.Errorf("невозможно изменить pullrequest в статусе merged")
-	}
-
-	old_reviewer, err := uc.user.GetById(old_reviewer_id)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	old_true_reviewer := removeUserFromUsersList(pullrequest.Reviewers, old_reviewer)[0]
-
-	team, err := uc.team.GetById(old_reviewer.TeamID)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	users := team.Users
-
-	author := pullrequest.Author
-
-	users = removeUserFromUsersList(users, &author)
-	users = removeUserFromUsersList(users, old_reviewer)
-	pullrequest.Reviewers = setNRandomReviewers(users, 1)
-
-	reviewer_replaced_by := pullrequest.Reviewers[0]
-
-	pullrequest.Reviewers = append(pullrequest.Reviewers, old_true_reviewer)
-
-	return pullrequest, reviewer_replaced_by, nil
-}
-
-func (uc *pullRequestUseCase) SetMergedStatus(pr_id string) (*domain.PR, error) {
-	pullrequest, err := uc.pr.GetById(pr_id)
-	if err != nil {
-		return nil, err
-	}
-
-	pullrequest.Status = domain.PullRequestStatusMerged
-	pullrequest.MergedAt = time.Now()
-
-	err = uc.pr.Update(pullrequest)
-	if err != nil {
-		return nil, err
-	}
-
-	return pullrequest, nil
-}
-
-func (uc *pullRequestUseCase) SetOpenStatus(pr_id string) (*domain.PR, error) {
-	pullrequest, err := uc.pr.GetById(pr_id)
+func (uc *pullRequestUseCase) SetOpenStatus(ctx context.Context, pr_id string) (*domain.PR, error) {
+	pullrequest, err := uc.pr.GetById(ctx, pr_id)
 	if err != nil {
 		return nil, err
 	}
 
 	pullrequest.Status = domain.PullRequestStatusOpen
 
-	err = uc.pr.Update(pullrequest)
+	err = uc.pr.Update(ctx, pullrequest)
 	if err != nil {
 		return nil, err
 	}
@@ -182,15 +229,10 @@ func (uc *pullRequestUseCase) SetOpenStatus(pr_id string) (*domain.PR, error) {
 	return pullrequest, nil
 }
 
-func (uc *pullRequestUseCase) Delete(id string) error {
-	return uc.pr.Delete(id)
+func (uc *pullRequestUseCase) Delete(ctx context.Context, id string) error {
+	return uc.pr.Delete(ctx, id)
 }
 
-func (uc *pullRequestUseCase) GetListByUserId(user_id string) ([]*domain.PR, error) {
-	user, err := uc.user.GetById(user_id)
-	if err != nil {
-		return nil, err
-	}
-
-	return user.PullRequests, nil
+func (uc *pullRequestUseCase) GetListByUserId(ctx context.Context, user_id string) ([]domain.PR, error) {
+	return uc.pr.GetByReviewerAndStatus(ctx, user_id, domain.PullRequestStatusOpen)
 }

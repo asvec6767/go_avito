@@ -1,7 +1,9 @@
 package gorm
 
 import (
+	"context"
 	"main/internal/domain"
+	"main/internal/repository/gorm/models"
 
 	"gorm.io/gorm"
 )
@@ -16,10 +18,10 @@ func NewUserRepository(db *gorm.DB) domain.UserRepository {
 	}
 }
 
-func (r *userRepository) GetById(id string) (*domain.User, error) {
-	var user domain.User
+func (r *userRepository) GetById(ctx context.Context, id string) (*domain.User, error) {
+	var model models.UserModel
 
-	err := r.db.First(&user, id).Error
+	err := r.db.WithContext(ctx).Where("user_id = ?", id).First(&model).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, domain.ErrUserNotFound
@@ -27,38 +29,39 @@ func (r *userRepository) GetById(id string) (*domain.User, error) {
 		return nil, err
 	}
 
+	user := model.ToDomain()
+
 	return &user, nil
 }
 
-// func (r *userRepository) GetByName(name string) (*domain.User, error) {
-// 	var user domain.User
+func (r *userRepository) GetByActiveAndTeam(ctx context.Context, teamID string) ([]domain.User, error) {
+	var models []models.UserModel
 
-// 	err := r.db.Where("name = ?", name).First(&user).Error
-// 	if err != nil {
-// 		if err == gorm.ErrRecordNotFound {
-// 			return nil, domain.ErrUserNotFound
-// 		}
-// 		return nil, err
-// 	}
-
-// 	return &user, nil
-// }
-
-func (r *userRepository) Create(user *domain.User) error {
-	var existingUser domain.User
-	err := r.db.Where("username = ?", user.Username).First(&existingUser).Error
-	if err == nil {
-		return domain.ErrUserAlreadyExists
-	}
-	if err != gorm.ErrRecordNotFound {
-		return err
+	err := r.db.WithContext(ctx).
+		Where("team_id = ? AND is_active = ?", teamID, true).
+		Find(&models).Error
+	if err != nil {
+		return nil, err
 	}
 
-	return r.db.Create(user).Error
+	users := make([]domain.User, len(models))
+	for i, model := range models {
+		users[i] = model.ToDomain()
+	}
+
+	return users, nil
 }
 
-func (r *userRepository) Update(user *domain.User) error {
-	result := r.db.Save(user)
+func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
+	model := models.UserToModel(*user)
+
+	return r.db.WithContext(ctx).Create(&model).Error
+}
+
+func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
+	model := models.UserToModel(*user)
+
+	result := r.db.WithContext(ctx).Save(&model)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -68,8 +71,8 @@ func (r *userRepository) Update(user *domain.User) error {
 	return nil
 }
 
-func (r *userRepository) Delete(id string) error {
-	result := r.db.Delete(&domain.User{}, id)
+func (r *userRepository) Delete(ctx context.Context, id string) error {
+	result := r.db.WithContext(ctx).Delete(&models.UserModel{}, id)
 	if result.Error != nil {
 		return result.Error
 	}

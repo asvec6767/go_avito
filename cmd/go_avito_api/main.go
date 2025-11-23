@@ -37,7 +37,7 @@ func main() {
 	prRepo := gorm.NewPRRepository(db)
 
 	// инициализация usecase слоя
-	userUseCase := userusecase.NewUserUseCase(userRepo)
+	userUseCase := userusecase.NewUserUseCase(userRepo, teamRepo)
 	teamUseCase := teamusecase.NewTeamUseCase(teamRepo, userRepo)
 	prUseCase := prusecase.NewPullRequestUseCase(prRepo, userRepo, teamRepo)
 

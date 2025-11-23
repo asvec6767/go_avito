@@ -30,7 +30,7 @@ func (r *Router) SetupRoutes() *gin.Engine {
 	userGroup := router.Group("/users")
 	{
 		userGroup.POST("/setIsActive", r.userHandler.PostUsersSetIsActive)
-		userGroup.GET("/getReview", r.userHandler.GetUserGet)
+		userGroup.GET("/getReview", r.prHandler.GetUsersGetReview)
 	}
 	teamGroup := router.Group("/team")
 	{

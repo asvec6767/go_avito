@@ -1,6 +1,7 @@
 package team
 
 import (
+	"context"
 	"main/internal/domain"
 
 	"gorm.io/gorm"
@@ -11,6 +12,10 @@ type teamUseCase struct {
 	user domain.UserRepository
 }
 
+type CreateTeamRequest struct {
+	Name string
+}
+
 func NewTeamUseCase(teamRepo domain.TeamRepository, userRepo domain.UserRepository) *teamUseCase {
 	return &teamUseCase{
 		team: teamRepo,
@@ -18,39 +23,39 @@ func NewTeamUseCase(teamRepo domain.TeamRepository, userRepo domain.UserReposito
 	}
 }
 
-func (uc *teamUseCase) Create(name string) (*domain.Team, error) {
+func (uc *teamUseCase) Create(ctx context.Context, name string) (*domain.Team, error) {
 	team := &domain.Team{
 		Name: name,
 	}
 
-	if err := uc.team.Create(team); err != nil {
+	if err := uc.team.Create(ctx, team); err != nil {
 		return nil, err
 	}
 
 	return team, nil
 }
 
-func (uc *teamUseCase) GetById(id string) (*domain.Team, error) {
-	return uc.team.GetById(id)
+func (uc *teamUseCase) GetById(ctx context.Context, id string) (*domain.Team, error) {
+	return uc.team.GetById(ctx, id)
 }
 
-func (uc *teamUseCase) GetByName(name string) (*domain.Team, error) {
-	return uc.team.GetByName(name)
+func (uc *teamUseCase) GetByName(ctx context.Context, name string) (*domain.Team, error) {
+	return uc.team.GetByName(ctx, name)
 }
 
-func (uc *teamUseCase) AddUser(team_id, user_id string) error {
-	if _, err := uc.team.GetById(team_id); err != nil {
+func (uc *teamUseCase) AddUser(ctx context.Context, team_id, user_id string) error {
+	if _, err := uc.team.GetById(ctx, team_id); err != nil {
 		return err
 	}
 
-	user, err := uc.user.GetById(user_id)
+	user, err := uc.user.GetById(ctx, user_id)
 	if err != nil {
 		return err
 	}
 
 	user.TeamID = team_id
 
-	err = uc.user.Update(user)
+	err = uc.user.Update(ctx, user)
 	if err != nil {
 		return err
 	}
@@ -58,15 +63,15 @@ func (uc *teamUseCase) AddUser(team_id, user_id string) error {
 	return nil
 }
 
-func (uc *teamUseCase) RemoveUser(user_id string) error {
-	user, err := uc.user.GetById(user_id)
+func (uc *teamUseCase) RemoveUser(ctx context.Context, user_id string) error {
+	user, err := uc.user.GetById(ctx, user_id)
 	if err != nil {
 		return err
 	}
 
 	user.TeamID = ""
 
-	err = uc.user.Update(user)
+	err = uc.user.Update(ctx, user)
 	if err != nil {
 		return err
 	}
@@ -74,21 +79,21 @@ func (uc *teamUseCase) RemoveUser(user_id string) error {
 	return nil
 }
 
-func (uc *teamUseCase) SetUsers(team_id string, users []domain.User) error {
-	if _, err := uc.team.GetById(team_id); err != nil {
+func (uc *teamUseCase) SetUsers(ctx context.Context, team_id string, users []domain.User) error {
+	if _, err := uc.team.GetById(ctx, team_id); err != nil {
 		return err
 	}
 
 	for _, user := range users {
-		_, err := uc.user.GetById(user.UserId)
+		_, err := uc.user.GetById(ctx, user.ID)
 		switch err {
 		case gorm.ErrRecordNotFound: // Нет такого юзера - создать
-			if err := uc.user.Create(&user); err != nil {
+			if err := uc.user.Create(ctx, &user); err != nil {
 				return err
 			}
 		case nil: // Есть такой юзер - задать команду
 			user.TeamID = team_id
-			if err := uc.user.Update(&user); err != nil {
+			if err := uc.user.Update(ctx, &user); err != nil {
 				return err
 			}
 		default:
@@ -99,21 +104,21 @@ func (uc *teamUseCase) SetUsers(team_id string, users []domain.User) error {
 	return nil
 }
 
-func (uc *teamUseCase) RemoveAllUsers(team_id string) error {
-	team, err := uc.team.GetById(team_id)
+func (uc *teamUseCase) RemoveAllUsers(ctx context.Context, team_id string) error {
+	_, err := uc.team.GetById(ctx, team_id)
 	if err != nil {
 		return err
 	}
 
-	// users, err := uc.user.GetListByTeamId(team_id)
-	// if err != nil {
-	// 	return err
-	// }
+	users, err := uc.user.GetByActiveAndTeam(ctx, team_id)
+	if err != nil {
+		return err
+	}
 
-	for _, user := range team.Users {
+	for _, user := range users {
 		user.TeamID = ""
 
-		err = uc.user.Update(user)
+		err = uc.user.Update(ctx, &user)
 		if err != nil {
 			return err
 		}
@@ -122,9 +127,9 @@ func (uc *teamUseCase) RemoveAllUsers(team_id string) error {
 	return nil
 }
 
-func (uc *teamUseCase) Delete(id string) error {
-	if err := uc.RemoveAllUsers(id); err != nil {
+func (uc *teamUseCase) Delete(ctx context.Context, id string) error {
+	if err := uc.RemoveAllUsers(ctx, id); err != nil {
 		return err
 	}
-	return uc.team.Delete(id)
+	return uc.team.Delete(ctx, id)
 }
