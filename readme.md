@@ -14,5 +14,8 @@
 - password: password
 - database: myapp
 
+Используемый при разработке линтер:
+- govet
+
 Скрин работы:
 ![скриншот](https://github.com/asvec6767/go_avito/blob/main/screenshot.png?raw=true)
