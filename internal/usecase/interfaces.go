@@ -21,6 +21,7 @@ type TeamUseCase interface {
 	Create(ctx context.Context, name string) (*domain.Team, error)
 	GetById(ctx context.Context, id string) (*domain.Team, error)
 	GetByName(ctx context.Context, name string) (*domain.Team, error)
+	GetByNameWithUsers(ctx context.Context, name string) (*domain.Team, *[]domain.User, error)
 	SetUsers(ctx context.Context, team_id string, users []domain.User) error
 	AddUser(ctx context.Context, team_id, user_id string) error
 	RemoveUser(ctx context.Context, user_id string) error

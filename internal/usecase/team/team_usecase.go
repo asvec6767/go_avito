@@ -43,6 +43,20 @@ func (uc *teamUseCase) GetByName(ctx context.Context, name string) (*domain.Team
 	return uc.team.GetByName(ctx, name)
 }
 
+func (uc *teamUseCase) GetByNameWithUsers(ctx context.Context, name string) (*domain.Team, *[]domain.User, error) {
+	team, err := uc.team.GetByName(ctx, name)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	users, err := uc.user.GetByActiveAndTeam(ctx, team.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return team, &users, nil
+}
+
 func (uc *teamUseCase) AddUser(ctx context.Context, team_id, user_id string) error {
 	if _, err := uc.team.GetById(ctx, team_id); err != nil {
 		return err

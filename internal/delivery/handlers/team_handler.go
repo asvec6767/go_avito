@@ -17,7 +17,8 @@ type CreateTeamRequest struct {
 }
 
 type TeamResponse struct {
-	TeamName string `json:"team_name"`
+	TeamName string       `json:"team_name"`
+	Members  UserResponse `json:"members"`
 }
 
 type TeamCreateRequest struct {
@@ -68,11 +69,20 @@ func (h *TeamHandler) GetTeamGet(c *gin.Context) {
 		return
 	}
 
-	team, err := h.teamUseCase.GetByName(c.Request.Context(), teamName)
+	team, users, err := h.teamUseCase.GetByNameWithUsers(c.Request.Context(), teamName)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, team)
+	resp := TeamResponse{
+		TeamName: team.Name,
+	}
+	for _, user := range *users {
+		resp.Members.ID = user.ID
+		resp.Members.Username = user.Username
+		resp.Members.IsActive = user.IsActive
+	}
+
+	c.JSON(http.StatusOK, resp)
 }

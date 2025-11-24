@@ -11,7 +11,7 @@ services:
       - postgres
     environment:
       - ENVIRONMENT=production
-    restart: unless-stopped
+    restart: always #unless-stopped
 
   postgres:
     image: postgres:15-alpine

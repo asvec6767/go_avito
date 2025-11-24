@@ -30,12 +30,12 @@ func (r *Router) SetupRoutes() *gin.Engine {
 	userGroup := router.Group("/users")
 	{
 		userGroup.POST("/setIsActive", r.userHandler.PostUsersSetIsActive)
-		userGroup.GET("/getReview", r.prHandler.GetUsersGetReview)
+		userGroup.GET("/getReview/:user_id", r.prHandler.GetUsersGetReview)
 	}
-	teamGroup := router.Group("/team")
+	teamGroup := router.Group("/team/:user_id")
 	{
 		teamGroup.POST("/add", r.teamHandler.PostTeamAdd)
-		teamGroup.GET("/get", r.teamHandler.GetTeamGet)
+		teamGroup.GET("/get/:team_name", r.teamHandler.GetTeamGet)
 	}
 	prGroup := router.Group("/pullRequest")
 	{

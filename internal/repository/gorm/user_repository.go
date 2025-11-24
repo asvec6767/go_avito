@@ -52,6 +52,24 @@ func (r *userRepository) GetByActiveAndTeam(ctx context.Context, teamID string) 
 	return users, nil
 }
 
+func (r *userRepository) GetByTeam(ctx context.Context, teamID string) ([]domain.User, error) {
+	var models []models.UserModel
+
+	err := r.db.WithContext(ctx).
+		Where("team_id = ?", teamID).
+		Find(&models).Error
+	if err != nil {
+		return nil, err
+	}
+
+	users := make([]domain.User, len(models))
+	for i, model := range models {
+		users[i] = model.ToDomain()
+	}
+
+	return users, nil
+}
+
 func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 	model := models.UserToModel(*user)
 

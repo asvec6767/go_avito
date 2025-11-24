@@ -97,7 +97,7 @@ func (r *prRepository) GetByReviewerAndStatus(ctx context.Context, reviewerID st
 
 	// TODO: перепроверить правильность JOIN
 	err := r.db.WithContext(ctx).
-		Joins("JOIN pr_reviewers ON pr_reviewers.pr_model_id = pull_requests.id").
+		Joins("JOIN pr_reviewers ON pr_reviewers.pr_model_id = pr_models.id").
 		Where("pr_reviewers.user_model_user_id = ? AND status = ?", reviewerID, status).
 		Find(&models).Error
 	if err != nil {
